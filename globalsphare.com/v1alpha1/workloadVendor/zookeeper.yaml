@@ -1,0 +1,138 @@
+apiVersion: aam.globalsphare.com/v1alpha1
+kind: WorkloadVendor
+metadata:
+  name: zookeeper
+spec: |
+  import "mod/context"
+
+  import "mod/configmap"
+
+  import "mod/auth"
+
+  parameter: {
+    size: *"1G" | string
+    after?: string
+  }
+  construct: "\(context.componentName)-service": {
+  	apiVersion: "v1"
+  	kind:       "Service"
+  	metadata: {
+  		name: context.componentName
+  		labels: {
+  			"app":       "\(context.appName)"
+  			"component": "\(context.componentName)"
+  		}
+  		namespace: context.namespace
+  	}
+  	spec: {
+  		selector: {
+  			"app":       "\(context.appName)"
+  			"component": "\(context.componentName)"
+  		}
+  		ports: [{
+  			name: "client"
+  			port: 2181
+  		}]
+  	}
+  }
+  construct: "\(context.componentName)-headless-service": {
+  	apiVersion: "v1"
+  	kind:       "Service"
+  	metadata: {
+  		name: "\(context.componentName)-headless"
+  		labels: {
+  			"app":       context.appName
+  			"component": context.componentName
+  		}
+  		namespace: context.namespace
+  	}
+  	spec: {
+  		selector: {
+  			"app":       context.appName
+  			"component": context.componentName
+  		}
+  		clusterIP: "None"
+  		ports: [{
+  			name: "client"
+  			port: 2181
+  		}, {
+  			name: "server"
+  			port: 2888
+  		}, {
+  			name: "leader-election"
+  			port: 3888
+  		}]
+  	}
+  }
+
+  construct: "\(context.componentName)-StatefulSet": {
+  	apiVersion: "apps/v1"
+  	kind:       "StatefulSet"
+  	metadata: {
+  		name:      "\(context.componentName)"
+  		namespace: context.namespace
+  	}
+  	spec: {
+  		serviceName: "\(context.componentName)-headless"
+  		replicas:    1
+  		selector: {
+  			matchLabels: {
+  				"app":       "\(context.appName)"
+  				"component": "\(context.componentName)"
+  			}
+  		}
+  		template: {
+  			metadata: {
+  				labels: {
+  					"app":       "\(context.appName)"
+  					"component": "\(context.componentName)"
+  				}
+  			}
+  			spec: {
+  				serviceAccountName: context.appName
+  				containers: [{
+  					name:  "main"
+  					image: "fastop/zookeeper:3.4.10"
+  					ports: [{
+  						containerPort: 2181
+  						name:          "client"
+  					}, {
+  						containerPort: 2888
+  						name:          "server"
+  					}, {
+  						containerPort: 3888
+  						name:          "leader-election"
+  					}]
+  					command: [
+  						"sh",
+  						"-c",
+  						"start-zookeeper --servers=1 --data_dir=/var/lib/zookeeper/data --data_log_dir=/var/lib/zookeeper/data/log --conf_dir=/opt/zookeeper/conf --client_port=2181 --election_port=3888 --server_port=2888 --tick_time=2000 --init_limit=10 --sync_limit=5 --heap=1G --max_client_cnxns=60 --snap_retain_count=3 --purge_interval=12 --max_session_timeout=40000 --min_session_timeout=4000 --log_level=INFO",
+  					]
+  					volumeMounts: [
+  						{
+  							name:      "storage-\(context.componentName)"
+  							mountPath: "/var/lib/zookeeper"
+  						}]
+  				}, {
+  					name:  "status"
+  					image: "harbor1.zlibs.com/island/centos:7"
+  					command: ["/bin/sh", "-c", "while true; do resp=`curl -X PUT -H 'Content-Type: application/json' -d '{\"message\": \"部署成功\"}' http://island-api.island-system/status/\(context.namespace)/\(context.componentName)/1 | grep '\"code\":0' | wc -l `; if [[ $resp -ne 1 ]]; then sleep 30s; else sleep 3600d ; fi; done"]
+  				}]
+  			}
+  		}
+  		volumeClaimTemplates: [{
+  			metadata: {
+  				name: "storage-\(context.componentName)"
+  			}
+  			spec: {
+  				accessModes: ["ReadWriteOnce"]
+  				storageClassName: "rook-ceph-block"
+  				resources: {
+  					requests: {
+  						storage: parameter.size
+  					}
+  				}
+  			}
+  		}]
+  	}
+  }
