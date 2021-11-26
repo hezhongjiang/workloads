@@ -133,5 +133,18 @@ spec: |
   		}]
   	}
   }
+  construct: "\(context.componentName)-zk-AuthorizationPolicy": {
+  	apiVersion: "security.istio.io/v1beta1"
+  	kind:       "AuthorizationPolicy"
+  	metadata: {
+  		name:      "\(context.namespace)-to\(context.namespace)-zk"
+  		namespace: context.namespace
+  	}
+  	spec: {
+  		action: "ALLOW"
+  		rules: [{}]
+  	}
+  }
+
 
 
