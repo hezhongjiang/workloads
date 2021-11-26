@@ -1,10 +1,8 @@
 apiVersion: aam.globalsphare.com/v1alpha1
 kind: WorkloadType
 metadata:
-  name: kafka
+  name: zookeeper
 spec:
   parameter: |
     size: *"1G" | string
-    broker_num: int | *3
-    zookeeper_name: string
     after?: string
