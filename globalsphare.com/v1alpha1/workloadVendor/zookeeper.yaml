@@ -3,10 +3,9 @@ kind: WorkloadVendor
 metadata:
   name: zookeeper
 spec: |
+  import "list"
   import "mod/context"
-
   import "mod/configmap"
-
   import "mod/auth"
 
   parameter: {

@@ -21,4 +21,4 @@ spec:
     }]
     after?: string
   traits:
-    - aam.globalsphare.com/v1alpha1/trait/ingress
+    - globalsphare.com/v1alpha1/trait/ingress
