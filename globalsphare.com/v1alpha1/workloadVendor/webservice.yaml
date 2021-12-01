@@ -4,12 +4,10 @@ metadata:
   name: webservice
 spec: |
   import "mod/context"
-
   import "mod/auth"
-
   import "mod/storage"
-
   import "mod/configmap"
+  import "mod/dependency"
 
   parameter: {
     image:     string
@@ -199,6 +197,3 @@ spec: |
 
   //引入ingress的实现
   import "mod/ingress"
-
-  //引入dependency的实现
-  import "mod/dependency"
