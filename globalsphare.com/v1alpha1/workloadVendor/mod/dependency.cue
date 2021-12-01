@@ -17,9 +17,9 @@ parameter: {
 		protocol: string
 	}]
 }
-if parameter["authorization"] != _|_ {
-	for k, v in parameter.authorization {
-		dependency: "serviceentry-\(context.componentName)-to-\(v.name)": {
+if parameter["serviceentry"] != _|_ {
+	for k, v in parameter.serviceentry {
+		"construct": "serviceentry-\(context.componentName)-to-\(v.name)": {
 			apiVersion: "networking.istio.io/v1alpha3"
 			kind:       "ServiceEntry"
 			metadata: {
@@ -48,9 +48,9 @@ if parameter["authorization"] != _|_ {
 		}
 	}
 }
-if parameter["serviceentry"] != _|_ {
-	for k, v in parameter.serviceentry {
-		dependency: "island-allow-\(context.namespace)-to-\(v.namespace)-\(v.service)": {
+if parameter["authorization"] != _|_ {
+	for k, v in parameter.authorization {
+		"construct": "island-allow-\(context.namespace)-to-\(v.namespace)-\(v.service)": {
 			apiVersion: "security.istio.io/v1beta1"
 			kind:       "AuthorizationPolicy"
 			metadata: {
