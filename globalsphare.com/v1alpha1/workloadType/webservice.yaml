@@ -4,21 +4,32 @@ metadata:
   name: webservice
 spec:
   parameter: |
-    image:     string
-    port:      *80 | int
+    image: string
+    port:  *80 | int
     cmd?: [...string]
     args?: [...string]
     cpu?: string
     env?: [...{
-      name:   string
-      value?: string
-      valueFrom?: {
-        secretKeyRef: {
-          name: string
-          key:  string
+        name:   string
+        value?: string
+        valueFrom?: {
+            secretKeyRef: {
+                name: string
+                key:  string
+            }
         }
-      }
     }]
-    after?: string
+    configs?: [...{
+        path:     string
+        subPath?: string
+        data: [...{
+            name:  string
+            value: string
+        }]
+    }]
+    storage?: {
+        capacity: string
+        path:     string
+    }
   traits:
-    - globalsphare.com/v1alpha1/trait/ingress
+    - ingress

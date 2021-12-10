@@ -4,29 +4,25 @@ metadata:
   name: zookeeper
 spec: |
   import "list"
-  import "mod/context"
-  import "mod/configmap"
-  import "mod/auth"
 
   parameter: {
-    size: *"1G" | string
-    after?: string
+  	size: *"1G" | string
   }
-  construct: "\(context.componentName)-service": {
+  construct: "\(context.workloadName)-service": {
   	apiVersion: "v1"
   	kind:       "Service"
   	metadata: {
-  		name: context.componentName
+  		name: context.workloadName
   		labels: {
-  			"app":       "\(context.appName)"
-  			"component": "\(context.componentName)"
+  			app:      context.appName
+  			workload: context.workloadName
   		}
   		namespace: context.namespace
   	}
   	spec: {
   		selector: {
-  			"app":       "\(context.appName)"
-  			"component": "\(context.componentName)"
+  			app:      context.appName
+  			workload: context.workloadName
   		}
   		ports: [{
   			name: "client"
@@ -34,21 +30,21 @@ spec: |
   		}]
   	}
   }
-  construct: "\(context.componentName)-headless-service": {
+  construct: "\(context.workloadName)-headless-service": {
   	apiVersion: "v1"
   	kind:       "Service"
   	metadata: {
-  		name: "\(context.componentName)-headless"
+  		name: "\(context.workloadName)-headless"
   		labels: {
-  			"app":       context.appName
-  			"component": context.componentName
+  			app:      context.appName
+  			workload: context.workloadName
   		}
   		namespace: context.namespace
   	}
   	spec: {
   		selector: {
-  			"app":       context.appName
-  			"component": context.componentName
+  			app:      context.appName
+  			workload: context.workloadName
   		}
   		clusterIP: "None"
   		ports: [{
@@ -64,27 +60,27 @@ spec: |
   	}
   }
 
-  construct: "\(context.componentName)-StatefulSet": {
+  construct: "\(context.workloadName)-StatefulSet": {
   	apiVersion: "apps/v1"
   	kind:       "StatefulSet"
   	metadata: {
-  		name:      "\(context.componentName)"
+  		name:      context.workloadName
   		namespace: context.namespace
   	}
   	spec: {
-  		serviceName: "\(context.componentName)-headless"
+  		serviceName: "\(context.workloadName)-headless"
   		replicas:    1
   		selector: {
   			matchLabels: {
-  				"app":       "\(context.appName)"
-  				"component": "\(context.componentName)"
+  				app:      context.appName
+  				workload: context.workloadName
   			}
   		}
   		template: {
   			metadata: {
   				labels: {
-  					"app":       "\(context.appName)"
-  					"component": "\(context.componentName)"
+  					app:      context.appName
+  					workload: context.workloadName
   				}
   			}
   			spec: {
@@ -109,19 +105,15 @@ spec: |
   					]
   					volumeMounts: [
   						{
-  							name:      "storage-\(context.componentName)"
+  							name:      "storage-\(context.workloadName)"
   							mountPath: "/var/lib/zookeeper"
   						}]
-  				}, {
-  					name:  "status"
-  					image: "harbor1.zlibs.com/island/centos:7"
-  					command: ["/bin/sh", "-c", "while true; do resp=`curl -X PUT -H 'Content-Type: application/json' -d '{\"message\": \"部署成功\"}' http://island-api.island-system/status/\(context.namespace)/\(context.componentName)/1 | grep '\"code\":0' | wc -l `; if [[ $resp -ne 1 ]]; then sleep 30s; else sleep 3600d ; fi; done"]
   				}]
   			}
   		}
   		volumeClaimTemplates: [{
   			metadata: {
-  				name: "storage-\(context.componentName)"
+  				name: "storage-\(context.workloadName)"
   			}
   			spec: {
   				accessModes: ["ReadWriteOnce"]
@@ -135,26 +127,127 @@ spec: |
   		}]
   	}
   }
-  construct: "island-allow-\(context.namespace)-to-\(context.namespace)-\(context.componentName)-tcp": {
+  context: {
+  	appName:       string
+  	componentName: string
+  	namespace:     string
+  }
+  parameter: {
+  	authorization?: [...{
+  		service:   string
+  		namespace: string
+  		resources?: [...{
+  			uri: string
+  			action: [...string]
+  		}]
+  	}]
+  	serviceEntry?: [...{
+  		name:     string
+  		host:     string
+  		address:  string
+  		port:     int
+  		protocol: string
+  	}]
+  	dependencies: [...{[string]: host: string}]
+  	userconfigs: string
+  	ingress?: {
+  		host: string
+  		path?: [...string]
+  	}
+  }
+
+  construct: namespace: {
+  	apiVersion: "v1"
+  	kind:       "Namespace"
+  	metadata: {
+  		name: context.namespace
+  		labels: {
+  			"istio-injection": "enabled"
+  		}
+  	}
+  }
+  construct: serviceAccount: {
+  	apiVersion: "v1"
+  	kind:       "ServiceAccount"
+  	metadata: {
+  		name:      context.appName
+  		namespace: context.namespace
+  	}
+  }
+  construct: "default-authorizationPolicy": {
   	apiVersion: "security.istio.io/v1beta1"
   	kind:       "AuthorizationPolicy"
   	metadata: {
-  		name:      "\(context.namespace)-to-\(context.namespace)-\(context.componentName)-tcp"
+  		name:      context.namespace
   		namespace: context.namespace
   	}
-  	spec: {
-  		action: "ALLOW"
-  		selector: {
-  			matchLabels: {
-  				"component": context.componentName
+  	spec: {}
+  }
+  if parameter.serviceEntry != _|_ {
+  	for k, v in parameter.serviceEntry {
+  		"construct": "serviceEntry-\(context.workloadName)-to-\(v.name)": {
+  			apiVersion: "networking.istio.io/v1alpha3"
+  			kind:       "ServiceEntry"
+  			metadata: {
+  				name:      "\(context.workloadName)-to-\(v.name)"
+  				namespace: context.namespace
+  			}
+  			spec: {
+  				exportTo: ["."]
+  				hosts: [
+  					v.host,
+  				]
+  				if v.address != _|_ {
+  					addresses: [
+  						v.address,
+  					]
+  				}
+  				location: "MESH_EXTERNAL"
+  				ports: [
+  					{
+  						number:   v.port
+  						name:     "port-name"
+  						protocol: v.protocol
+  					},
+  				]
   			}
   		}
-  		rules: [
-  			{
-  				from: [
-  					{source: principals: ["cluster.local/ns/\(context.namespace)/sa/\(context.appName)"]},
+  	}
+  }
+  if parameter.authorization != _|_ {
+  	for k, v in parameter.authorization {
+  		construct: "island-allow-\(context.namespace)-to-\(v.namespace)-\(v.service)": {
+  			apiVersion: "security.istio.io/v1beta1"
+  			kind:       "AuthorizationPolicy"
+  			metadata: {
+  				name:      "\(context.namespace)-to-\(v.namespace)-\(v.service)"
+  				namespace: v.namespace
+  			}
+  			spec: {
+  				action: "ALLOW"
+  				selector: {
+  					matchLabels: {
+  						workload: v.service
+  					}
+  				}
+  				rules: [
+  					{
+  						from: [
+  							{source: principals: ["cluster.local/ns/\(context.namespace)/sa/\(context.appName)"]},
+  						]
+  						if v.resources != _|_ {
+  							to: [
+  								for resource in v.resources {
+  									operation: {
+  										methods: resource.actions
+  										paths: [resource.uri]
+  									}
+  								},
+  							]
+  						}
+  					},
   				]
-  			},
-  		]
+  			}
+  		}
   	}
   }

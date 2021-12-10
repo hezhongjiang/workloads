@@ -3,25 +3,20 @@ kind: WorkloadVendor
 metadata:
   name: kafka
 spec: |
-  import "mod/context"
-  import "mod/configmap"
-  import "mod/auth"
-
   parameter: {
-    size: *"1G" | string
-    broker_num: int | *3
-    zookeeper_name: string
-    after?: string
+  	size:           *"1G" | string
+  	broker_num:     int | *3
+  	zookeeper_name: string
   }
 
-  construct: "\(context.componentName)-kafka-headless-service": {
+  construct: "\(context.workloadName)-kafka-headless-service": {
   	apiVersion: "v1"
   	kind:       "Service"
   	metadata: {
-  		name:      "\(context.componentName)-kafka-hs"
+  		name:      "\(context.workloadName)-kafka-hs"
   		namespace: context.namespace
   		labels: {
-  			app: "\(context.componentName)-kafka"
+  			app: "\(context.workloadName)-kafka"
   		}
   	}
   	spec: {
@@ -31,23 +26,23 @@ spec: |
   		}]
   		clusterIP: "None"
   		selector: {
-  			app: "\(context.componentName)-kafka"
+  			app: "\(context.workloadName)-kafka"
   		}
   	}
   }
-  construct: "\(context.componentName)-kafka-service": {
+  construct: "\(context.workloadName)-kafka-service": {
   	apiVersion: "v1"
   	kind:       "Service"
   	metadata: {
-  		name:      "\(context.componentName)"
-  		namespace: "\(context.namespace)"
+  		name:      context.workloadName
+  		namespace: context.namespace
   		labels: {
-  			app: "\(context.componentName)-kafka"
+  			app: "\(context.workloadName)-kafka"
   		}
   	}
   	spec: {
   		selector: {
-  			app: "\(context.componentName)-kafka"
+  			app: "\(context.workloadName)-kafka"
   		}
   		ports: [{
   			name: "client"
@@ -55,43 +50,32 @@ spec: |
   		}]
   	}
   }
-  construct: "\(context.componentName)-kafka-StatefulSet": {
+  construct: "\(context.workloadName)-kafka-StatefulSet": {
   	apiVersion: "apps/v1"
   	kind:       "StatefulSet"
   	metadata: {
-  		name:      "\(context.componentName)-kafka"
-  		namespace: "\(context.namespace)"
+  		name:      "\(context.workloadName)-kafka"
+  		namespace: context.namespace
   	}
   	spec: {
-  		serviceName: "\(context.componentName)-kafka-hs"
-  		replicas:   parameter.broker_num
+  		serviceName: "\(context.workloadName)-kafka-hs"
+  		replicas:    parameter.broker_num
   		selector: {
   			matchLabels: {
-  				app: "\(context.componentName)-kafka"
+  				app: "\(context.workloadName)-kafka"
   			}
   		}
   		template: {
   			metadata: {
   				labels: {
-  					app: "\(context.componentName)-kafka"
+  					app: "\(context.workloadName)-kafka"
   				}
   			}
   			spec: {
   				serviceAccountName: context.appName
-  				if parameter["after"] != _|_ {
-  					initContainers: [
-  						{
-  							name:  "init"
-  							image: "harbor1.zlibs.com/island/centos:7"
-  							command: ["/bin/sh"]
-  							args: ["-c", "while true; do curl 'http://island-api.island-system/status/\(context.namespace)/\(parameter.after)' | grep '\"result\":1'; if [ $? -ne 0 ]; then sleep 4s; continue; else break; fi; done"]
-  						},
-  					]
-  				}
   				containers: [{
-  					name:            "main"
-  					imagePullPolicy: "IfNotPresent"
-  					image:           "registry.cn-hangzhou.aliyuncs.com/jaxzhai/k8skafka:v1"
+  					name:  "main"
+  					image: "registry.cn-hangzhou.aliyuncs.com/jaxzhai/k8skafka:v1"
   					ports: [{
   						containerPort: 9092
   						name:          "server"
@@ -108,22 +92,16 @@ spec: |
   						name:  "KAFKA_OPTS"
   						value: "-Dlogging.level=INFO"
   					}]
-  					volumeMounts: [
-  						{
-  							name:      "\(context.componentName)-kafka"
-  							mountPath: "/var/lib/kafka"
-  						},
-  					]
-  				}, {
-  					name:  "status"
-  					image: "harbor1.zlibs.com/island/centos:7"
-  					command: ["/bin/sh", "-c", "while true; do resp=`curl -X PUT -H 'Content-Type: application/json' -d '{\"message\": \"部署成功\"}' http://island-api.island-system/status/\(context.namespace)/\(context.componentName)/1 | grep '\"code\":0' | wc -l `; if [[ $resp -ne 1 ]]; then sleep 30s; else sleep 3600d ; fi; done"]
+  					volumeMounts: [{
+  						name:      "\(context.workloadName)-kafka"
+  						mountPath: "/var/lib/kafka"
+  					}]
   				}]
   			}
   		}
   		volumeClaimTemplates: [{
   			metadata: {
-  				name: "\(context.componentName)-kafka"
+  				name: "\(context.workloadName)-kafka"
   			}
   			spec: {
   				accessModes: ["ReadWriteOnce"]
@@ -133,18 +111,127 @@ spec: |
   		}]
   	}
   }
-  construct: "\(context.componentName)-zk-AuthorizationPolicy": {
-  	apiVersion: "security.istio.io/v1beta1"
-  	kind:       "AuthorizationPolicy"
-  	metadata: {
-  		name:      "\(context.namespace)-to\(context.namespace)-zk"
-  		namespace: context.namespace
-  	}
-  	spec: {
-  		action: "ALLOW"
-  		rules: [{}]
+  context: {
+  	appName:       string
+  	componentName: string
+  	namespace:     string
+  }
+  parameter: {
+  	authorization?: [...{
+  		service:   string
+  		namespace: string
+  		resources?: [...{
+  			uri: string
+  			action: [...string]
+  		}]
+  	}]
+  	serviceEntry?: [...{
+  		name:     string
+  		host:     string
+  		address:  string
+  		port:     int
+  		protocol: string
+  	}]
+  	dependencies: [...{[string]: host: string}]
+  	userconfigs: string
+  	ingress?: {
+  		host: string
+  		path?: [...string]
   	}
   }
 
-
-
+  construct: namespace: {
+  	apiVersion: "v1"
+  	kind:       "Namespace"
+  	metadata: {
+  		name: context.namespace
+  		labels: {
+  			"istio-injection": "enabled"
+  		}
+  	}
+  }
+  construct: serviceAccount: {
+  	apiVersion: "v1"
+  	kind:       "ServiceAccount"
+  	metadata: {
+  		name:      context.appName
+  		namespace: context.namespace
+  	}
+  }
+  construct: "default-authorizationPolicy": {
+  	apiVersion: "security.istio.io/v1beta1"
+  	kind:       "AuthorizationPolicy"
+  	metadata: {
+  		name:      context.namespace
+  		namespace: context.namespace
+  	}
+  	spec: {}
+  }
+  if parameter.serviceEntry != _|_ {
+  	for k, v in parameter.serviceEntry {
+  		"construct": "serviceEntry-\(context.workloadName)-to-\(v.name)": {
+  			apiVersion: "networking.istio.io/v1alpha3"
+  			kind:       "ServiceEntry"
+  			metadata: {
+  				name:      "\(context.workloadName)-to-\(v.name)"
+  				namespace: context.namespace
+  			}
+  			spec: {
+  				exportTo: ["."]
+  				hosts: [
+  					v.host,
+  				]
+  				if v.address != _|_ {
+  					addresses: [
+  						v.address,
+  					]
+  				}
+  				location: "MESH_EXTERNAL"
+  				ports: [
+  					{
+  						number:   v.port
+  						name:     "port-name"
+  						protocol: v.protocol
+  					},
+  				]
+  			}
+  		}
+  	}
+  }
+  if parameter.authorization != _|_ {
+  	for k, v in parameter.authorization {
+  		"construct": "island-allow-\(context.namespace)-to-\(v.namespace)-\(v.service)": {
+  			apiVersion: "security.istio.io/v1beta1"
+  			kind:       "AuthorizationPolicy"
+  			metadata: {
+  				name:      "\(context.namespace)-to-\(v.namespace)-\(v.service)"
+  				namespace: v.namespace
+  			}
+  			spec: {
+  				action: "ALLOW"
+  				selector: {
+  					matchLabels: {
+  						"workload": v.service
+  					}
+  				}
+  				rules: [
+  					{
+  						from: [
+  							{source: principals: ["cluster.local/ns/\(context.namespace)/sa/\(context.appName)"]},
+  						]
+  						if v.resources != _|_ {
+  							to: [
+  								for resource in v.resources {
+  									operation: {
+  										methods: resource.actions
+  										paths: [resource.uri]
+  									}
+  								},
+  							]
+  						}
+  					},
+  				]
+  			}
+  		}
+  	}
+  }

@@ -9,4 +9,3 @@ spec:
       capacity: string | "1Gi"
     }
     init: string
-    after?: string

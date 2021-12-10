@@ -1,4 +1,3 @@
-#aam.globalsphare.com/v1alpha1/trait-ingress
 apiVersion: aam.globalsphare.com/v1alpha1
 kind: Trait
 metadata:
