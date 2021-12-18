@@ -9,4 +9,3 @@ spec:
     user: *"admin" | string
     password: *"123456" | string
     size: *"1G" | string
-    after?: string

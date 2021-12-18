@@ -5,17 +5,29 @@ metadata:
 spec:
   parameter: |
     image: string
+    port:  *80 | int
     cmd?: [...string]
     args?: [...string]
     cpu?: string
     env?: [...{
-      name:   string
+        name:   string
         value?: string
         valueFrom?: {
-          secretKeyRef: {
-            name: string
-              key:  string
-          }
+            secretKeyRef: {
+                name: string
+                key:  string
+            }
         }
     }]
-    after?: string
+    configs?: [...{
+        path:     string
+        subPath?: string
+        data: [...{
+            name:  string
+            value: string
+        }]
+    }]
+    storage?: {
+        capacity: string
+        path:     string
+    }

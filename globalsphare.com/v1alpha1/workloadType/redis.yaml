@@ -4,4 +4,3 @@ metadata:
   name: redis
 spec:
   parameter: |
-    after?: string

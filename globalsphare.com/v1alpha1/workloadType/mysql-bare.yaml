@@ -6,4 +6,3 @@ spec:
   parameter: |
     rootpwd: string | "123456"
     init: string
-    after?: string

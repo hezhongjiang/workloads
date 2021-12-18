@@ -7,4 +7,3 @@ spec:
     size: *"1G" | string
     broker_num: int | *3
     zookeeper_name: string
-    after?: string
