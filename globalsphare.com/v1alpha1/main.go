@@ -30,12 +30,12 @@ func main() {
 	workload = append(workload, def{"workloadVendor","worker","aam.globalsphare.com/v1alpha1","workloadVendor/worker.yaml"})
 	workload = append(workload, def{"workloadVendor","mysql","aam.globalsphare.com/v1alpha1","workloadVendor/mysql.yaml"})
 	workload = append(workload, def{"workloadVendor","redis","aam.globalsphare.com/v1alpha1","workloadVendor/redis.yaml"})
-	workload = append(workload, def{"workloadType","kafka","aam.globalsphare.com/v1alpha1","workloadVendor/kafka.yaml"})
-	workload = append(workload, def{"workloadType","rabbitmq","aam.globalsphare.com/v1alpha1","workloadVendor/rabbitmq3.yaml"})
-	workload = append(workload, def{"workloadType","rabbitmq-ceph","aam.globalsphare.com/v1alpha1","workloadVendor/rabbitmq3-ceph.yaml"})
-	workload = append(workload, def{"workloadType","rabbitmq-plugins","aam.globalsphare.com/v1alpha1","workloadVendor/rabbitmq3-plugins.yaml"})
-	workload = append(workload, def{"workloadType","rabbitmq-plugins-ceph","aam.globalsphare.com/v1alpha1","workloadVendor/rabbitmq3-plugins-ceph.yaml"})
-	workload = append(workload, def{"workloadType","zookeeper","aam.globalsphare.com/v1alpha1","workloadVendor/zookeeper.yaml"})
+	workload = append(workload, def{"workloadVendor","kafka","aam.globalsphare.com/v1alpha1","workloadVendor/kafka.yaml"})
+	workload = append(workload, def{"workloadVendor","rabbitmq","aam.globalsphare.com/v1alpha1","workloadVendor/rabbitmq3.yaml"})
+	workload = append(workload, def{"workloadVendor","rabbitmq-ceph","aam.globalsphare.com/v1alpha1","workloadVendor/rabbitmq3-ceph.yaml"})
+	workload = append(workload, def{"workloadVendor","rabbitmq-plugins","aam.globalsphare.com/v1alpha1","workloadVendor/rabbitmq3-plugins.yaml"})
+	workload = append(workload, def{"workloadVendor","rabbitmq-plugins-ceph","aam.globalsphare.com/v1alpha1","workloadVendor/rabbitmq3-plugins-ceph.yaml"})
+	workload = append(workload, def{"workloadVendor","zookeeper","aam.globalsphare.com/v1alpha1","workloadVendor/zookeeper.yaml"})
 
 	//trait
 	workload = append(workload, def{"trait","ingress","aam.globalsphare.com/v1alpha1","trait/ingress.yaml"})
