@@ -129,7 +129,7 @@ construct: "\(context.workloadName)-viewer": {
 }
 context: {
 	appName:       string
-	componentName: string
+	workloadName: string
 	namespace:     string
 }
 parameter: {

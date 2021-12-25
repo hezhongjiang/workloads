@@ -123,7 +123,7 @@ construct: "\(context.workloadName)-service": {
 }
 context: {
 	appName:       string
-	componentName: string
+	workloadName: string
 	namespace:     string
 }
 parameter: {

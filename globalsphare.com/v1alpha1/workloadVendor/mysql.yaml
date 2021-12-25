@@ -341,7 +341,7 @@ spec: |
   }
   context: {
   	appName:       string
-  	componentName: string
+  	workloadName: string
   	namespace:     string
   }
   parameter: {
@@ -428,7 +428,7 @@ spec: |
   }
   if parameter.authorization != _|_ {
   	for k, v in parameter.authorization {
-  		"construct": "island-allow-\(context.namespace)-to-\(v.namespace)-\(v.service)": {
+  		construct: "island-allow-\(context.namespace)-to-\(v.namespace)-\(v.service)": {
   			apiVersion: "security.istio.io/v1beta1"
   			kind:       "AuthorizationPolicy"
   			metadata: {
@@ -439,7 +439,7 @@ spec: |
   				action: "ALLOW"
   				selector: {
   					matchLabels: {
-  						"workload": v.service
+  						workload: v.service
   					}
   				}
   				rules: [

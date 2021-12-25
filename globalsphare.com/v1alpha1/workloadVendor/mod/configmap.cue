@@ -13,11 +13,11 @@ parameter: {
 if parameter["configs"] != _|_ {
 	for k, v in parameter.configs {
 		construct: {
-			"island-\(context.componentName)-\(k)": {
+			"island-\(context.workloadName)-\(k)": {
 				apiVersion: "v1"
 				kind:       "ConfigMap"
 				metadata: {
-					name:      "\(context.componentName)-\(k)"
+					name:      "\(context.workloadName)-\(k)"
 					namespace: context.namespace
 				}
 				data: {

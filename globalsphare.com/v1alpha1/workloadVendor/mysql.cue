@@ -336,7 +336,7 @@ construct: "\(context.workloadName)-slave-statefulset": {
 }
 context: {
 	appName:       string
-	componentName: string
+	workloadName: string
 	namespace:     string
 }
 parameter: {

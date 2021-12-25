@@ -94,7 +94,7 @@ spec: |
   }
   context: {
   	appName:       string
-  	componentName: string
+  	workloadName: string
   	namespace:     string
   }
   parameter: {
@@ -192,7 +192,7 @@ spec: |
   				action: "ALLOW"
   				selector: {
   					matchLabels: {
-  						"workload": v.service
+  						workload: v.service
   					}
   				}
   				rules: [
