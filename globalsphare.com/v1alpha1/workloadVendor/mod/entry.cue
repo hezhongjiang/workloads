@@ -72,7 +72,7 @@ if parameter["entry"] != _|_ {
 				gateways: ["island-system/\(context.namespace)-http"]
 				http: [
 					{
-						name: context.componentName
+						name: context.workloadName
 						if parameter.entry.path != _|_ {
 							match: [
 								for k, v in parameter.entry.path {
@@ -83,7 +83,7 @@ if parameter["entry"] != _|_ {
 						route: [{
 							destination: {
 								port: number: 80
-								host: context.componentName
+								host: context.workloadName
 							}
 						}]
 					},
@@ -113,7 +113,7 @@ if parameter["entry"] != _|_ {
 						route: [
 							{
 								destination: {
-									host: context.componentName
+									host: context.workloadName
 									port: {
 										number: 80
 									}

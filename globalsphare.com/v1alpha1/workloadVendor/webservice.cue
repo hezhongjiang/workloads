@@ -139,14 +139,16 @@ construct: "\(context.workloadName)-deployment": {
 						containerPort: parameter.port
 					}]
 					volumeMounts: [
-						for k, v in parameter.configs if v.subPath != _|_ {
-							name:      "\(context.workloadName)-\(k)"
-							mountPath: "\(v.path)/\(v.subPath)"
-							subPath:   v.subPath
-						},
-						for k, v in parameter.configs if v.subPath == _|_ {
-							name:      "\(context.workloadName)-\(k)"
-							mountPath: v.path
+						if parameter.configs != _|_ {
+							for k, v in parameter.configs if v.subPath != _|_ {
+								name:      "\(context.workloadName)-\(k)"
+								mountPath: "\(v.path)/\(v.subPath)"
+								subPath:   v.subPath
+							}
+							for k, v in parameter.configs if v.subPath == _|_ {
+								name:      "\(context.workloadName)-\(k)"
+								mountPath: v.path
+							}
 						},
 						if parameter.userconfigs != _|_ {
 							name:      "userconfigs"
@@ -165,13 +167,15 @@ construct: "\(context.workloadName)-deployment": {
 					]
 				}]
 			volumes: [
-				for k, v in parameter.configs if v.subPath != _|_ {
-					name: "\(context.workloadName)-\(k)"
-					configMap: name: "\(context.workloadName)-\(k)"
-				},
-				for k, v in parameter.configs if v.subPath == _|_ {
-					name: "\(context.workloadName)-\(k)"
-					configMap: name: "\(context.workloadName)-\(k)"
+				if parameter.configs != _|_ {
+					for k, v in parameter.configs if v.subPath != _|_ {
+						name: "\(context.workloadName)-\(k)"
+						configMap: name: "\(context.workloadName)-\(k)"
+					}
+					for k, v in parameter.configs if v.subPath == _|_ {
+						name: "\(context.workloadName)-\(k)"
+						configMap: name: "\(context.workloadName)-\(k)"
+					}
 				},
 				if parameter.userconfigs != _|_ {
 					name: "userconfigs"
@@ -207,9 +211,7 @@ construct: service: {
 		}
 		ports: [{
 			name: "http"
-			if parameter.port != _|_ {
-				port: parameter.port
-			}
+			port: 80
 			if parameter.port != _|_ {
 				targetPort: parameter.port
 			}
@@ -242,7 +244,7 @@ construct: "\(context.workloadName)-viewer": {
 }
 context: {
 	appName:       string
-	componentName: string
+	workloadName: string
 	namespace:     string
 }
 parameter: {

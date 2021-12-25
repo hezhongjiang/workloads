@@ -113,7 +113,7 @@ spec: |
   }
   context: {
   	appName:       string
-  	componentName: string
+  	workloadName: string
   	namespace:     string
   }
   parameter: {

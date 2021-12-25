@@ -108,7 +108,7 @@ construct: "\(context.workloadName)-kafka-StatefulSet": {
 }
 context: {
 	appName:       string
-	componentName: string
+	workloadName: string
 	namespace:     string
 }
 parameter: {

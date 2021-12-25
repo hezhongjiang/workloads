@@ -14,7 +14,7 @@ if parameter.storage != _|_ {
 				apiVersion: "v1"
 				kind:       "PersistentVolumeClaim"
 				metadata: {
-					name:      "storage-\(context.componentName)"
+					name:      "storage-\(context.workloadName)"
 					namespace: context.namespace
 				}
 				spec: {

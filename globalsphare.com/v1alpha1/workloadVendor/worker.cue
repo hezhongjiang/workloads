@@ -76,7 +76,7 @@ if parameter.configs != _|_ {
 	}
 }
 if parameter.storage != _|_ {
-	if parameter.storage.capacity != "" {
+	if parameter.storage.capacity != _|_ {
 		construct: storage: {
 			apiVersion: "v1"
 			kind:       "PersistentVolumeClaim"
@@ -94,9 +94,29 @@ if parameter.storage != _|_ {
 		}
 	}
 }
-construct: "\(context.workloadName)-deployment": {
+construct: statefulsetheadless: {
+	apiVersion: "v1"
+	kind:       "Service"
+	metadata: {
+		name:      "\(context.workloadName)-headless"
+		namespace: context.namespace
+		labels: {
+			workload: context.workloadName
+			app:      context.appName
+		}
+	}
+	spec: {
+		clusterIP: "None"
+		selector: {
+			workload: context.workloadName
+			app:      context.appName
+		}
+	}
+}
+
+construct: "\(context.workloadName)-statefulset": {
 	apiVersion: "apps/v1"
-	kind:       "Deployment"
+	kind:       "StatefulSet"
 	metadata: {
 		name:      context.workloadName
 		namespace: context.namespace
@@ -106,16 +126,19 @@ construct: "\(context.workloadName)-deployment": {
 			app:      context.appName
 			workload: context.workloadName
 		}
+		replicas:    1
+		serviceName: "\(context.workloadName)-headless"
 		template: {
 			metadata: labels: {
-				app:      context.appName
-				workload: context.workloadName
+				"app":      context.appName
+				"workload": context.workloadName
 			}
 			spec: {
 				serviceAccountName: context.appName
 				containers: [{
-					name:  "main"
-					image: parameter.image
+					name:            context.workloadName
+					image:           parameter.image
+					imagePullPolicy: "Always"
 					if parameter.cmd != _|_ {
 						command: parameter.cmd
 					}
@@ -127,15 +150,10 @@ construct: "\(context.workloadName)-deployment": {
 					}
 					if parameter.cpu != _|_ {
 						resources: {
-							limits:
-								cpu: parameter.cpu
-							requests:
-								cpu: parameter.cpu
+							limits: cpu:   parameter.cpu
+							requests: cpu: parameter.cpu
 						}
 					}
-					ports: [{
-						containerPort: parameter.port
-					}]
 					volumeMounts: [
 						for k, v in parameter.configs if v.subPath != _|_ {
 							name:      "\(context.workloadName)-\(k)"
@@ -162,80 +180,32 @@ construct: "\(context.workloadName)-deployment": {
 						},
 					]
 				}]
-			volumes: [
-				for k, v in parameter.configs if v.subPath != _|_ {
-					name: "\(context.workloadName)-\(k)"
-					configMap: name: "\(context.workloadName)-\(k)"
-				},
-				for k, v in parameter.configs if v.subPath == _|_ {
-					name: "\(context.workloadName)-\(k)"
-					configMap: name: "\(context.workloadName)-\(k)"
-				},
-				if parameter.userconfigs != _|_ {
-					name: "userconfigs"
-					configMap: name: "userconfigs"
-				},
-				for k, v in parameter.dependencies {
-					name: "dependencies-\(k)"
-					configMap: name: "dependencies-\(k)"
-				},
-				if parameter.storage != _|_ {
-					if parameter.storage.capacity != "" {
-						name: "storage-\(context.workloadName)"
-						persistentVolumeClaim: claimName: "storage-\(context.workloadName)"
-					}
-				},
-			]
-		}
-		}
-	}
-}
-
-construct: service: {
-	apiVersion: "v1"
-	kind:       "Service"
-	metadata: {
-		name:      context.workloadName
-		namespace: context.namespace
-	}
-	spec: {
-		selector: {
-			app:      context.appName
-			workload: context.workloadName
-		}
-		ports: [{
-			name: "http"
-			if parameter.port != _|_ {
-				port: parameter.port
-			}
-			if parameter.port != _|_ {
-				targetPort: parameter.port
-			}
-		}]
-	}
-}
-
-construct: "\(context.workloadName)-viewer": {
-	apiVersion: "security.istio.io/v1beta1"
-	kind:       "AuthorizationPolicy"
-	metadata: {
-		name:      "\(context.workloadName)-viewer"
-		namespace: context.namespace
-	}
-	spec: {
-		selector: {
-			matchLabels: {
-				app:      context.appName
-				workload: context.workloadName
+				volumes: [
+					for k, v in parameter.configs if v.subPath != _|_ {
+						name: "\(context.workloadName)-\(k)"
+						configMap: name: "\(context.workloadName)-\(k)"
+					},
+					for k, v in parameter.configs if v.subPath == _|_ {
+						name: "\(context.workloadName)-\(k)"
+						configMap: name: "\(context.workloadName)-\(k)"
+					},
+					if parameter.userconfigs != _|_ {
+						name: "userconfigs"
+						configMap: name: "userconfigs"
+					},
+					for k, v in parameter.dependencies {
+						name: "dependencies-\(k)"
+						configMap: name: "dependencies-\(k)"
+					},
+					if parameter.storage != _|_ {
+						if parameter.storage.capacity != "" {
+							name: "storage-\(context.workloadName)"
+							persistentVolumeClaim: claimName: "storage-\(context.workloadName)"
+						}
+					},
+				]
 			}
 		}
-		rules: [{
-			to: [{
-				operation: {
-					methods: ["GET", "POST", "DELETE", "PUT", "HEAD", "OPTIONS", "PATCH"]
-				}
-			}]
-		}]
 	}
 }
 context: {
@@ -340,23 +310,21 @@ if parameter.authorization != _|_ {
 						workload: v.service
 					}
 				}
-				rules: [
-					{
-						from: [
-							{source: principals: ["cluster.local/ns/\(context.namespace)/sa/\(context.appName)"]},
+				rules: [{
+					from: [
+						{source: principals: ["cluster.local/ns/\(context.namespace)/sa/\(context.appName)"]},
+					]
+					if v.resources != _|_ {
+						to: [
+							for resource in v.resources {
+								operation: {
+									methods: resource.actions
+									paths: [resource.uri]
+								}
+							},
 						]
-						if v.resources != _|_ {
-							to: [
-								for resource in v.resources {
-									operation: {
-										methods: resource.actions
-										paths: [resource.uri]
-									}
-								},
-							]
-						}
-					},
-				]
+					}
+				}]
 			}
 		}
 	}
