@@ -41,18 +41,20 @@ if parameter.userconfigs != _|_ {
 	}
 }
 
-for k, v in parameter.configs {
-	construct: "island-\(context.workloadName)-\(k)": {
-		apiVersion: "v1"
-		kind:       "ConfigMap"
-		metadata: {
-			name:      "\(context.workloadName)-\(k)"
-			namespace: context.namespace
-		}
-		data: {
-			for _, vv in v.data {
-				if vv.name != "island-info" {
-					"\(vv.name)": vv.value
+if parameter.configs != _|_ {
+	for k, v in parameter.configs {
+		construct: "island-\(context.workloadName)-\(k)": {
+			apiVersion: "v1"
+			kind:       "ConfigMap"
+			metadata: {
+				name:      "\(context.workloadName)-\(k)"
+				namespace: context.namespace
+			}
+			data: {
+				for _, vv in v.data {
+					if vv.name != "island-info" {
+						"\(vv.name)": vv.value
+					}
 				}
 			}
 		}
@@ -138,11 +140,13 @@ construct: "\(context.workloadName)-statefulset": {
 						}
 					}
 					volumeMounts: [
+						if parameter.configs != _|_
 						for k, v in parameter.configs if v.subPath != _|_ {
 							name:      "\(context.workloadName)-\(k)"
 							mountPath: "\(v.path)/\(v.subPath)"
 							subPath:   v.subPath
 						},
+						if parameter.configs != _|_
 						for k, v in parameter.configs if v.subPath == _|_ {
 							name:      "\(context.workloadName)-\(k)"
 							mountPath: v.path
@@ -151,19 +155,21 @@ construct: "\(context.workloadName)-statefulset": {
 							name:      "userconfigs"
 							mountPath: "/etc/configs"
 						},
-						if parameter.storage != _|_ {
-							if parameter.storage.capacity != "" {
-								name:      "storage-\(context.workloadName)"
-								mountPath: parameter.storage.path
-							}
+						if parameter.storage != _|_
+						if parameter.storage.capacity != "" {
+							name:      "storage-\(context.workloadName)"
+							mountPath: parameter.storage.path
 						},
+
 					]
 				}]
 				volumes: [
+					if parameter.configs != _|_
 					for k, v in parameter.configs if v.subPath != _|_ {
 						name: "\(context.workloadName)-\(k)"
 						configMap: name: "\(context.workloadName)-\(k)"
 					},
+					if parameter.configs != _|_
 					for k, v in parameter.configs if v.subPath == _|_ {
 						name: "\(context.workloadName)-\(k)"
 						configMap: name: "\(context.workloadName)-\(k)"
@@ -172,12 +178,12 @@ construct: "\(context.workloadName)-statefulset": {
 						name: "userconfigs"
 						configMap: name: "userconfigs"
 					},
-					if parameter.storage != _|_ {
-						if parameter.storage.capacity != "" {
-							name: "storage-\(context.workloadName)"
-							persistentVolumeClaim: claimName: "storage-\(context.workloadName)"
-						}
+					if parameter.storage != _|_
+					if parameter.storage.capacity != "" {
+						name: "storage-\(context.workloadName)"
+						persistentVolumeClaim: claimName: "storage-\(context.workloadName)"
 					},
+
 				]
 			}
 		}
