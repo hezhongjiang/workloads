@@ -101,9 +101,9 @@ construct: "\(context.workloadName)-service": {
 	}
 }
 context: {
-	appName:       string
+	appName:      string
 	workloadName: string
-	namespace:     string
+	namespace:    string
 }
 parameter: {
 	authorization?: [...{
@@ -121,8 +121,8 @@ parameter: {
 		port:     int
 		protocol: string
 	}]
-	dependencies: [...{[string]: host: string}]
-	userconfigs: string
+	dependencies?: [string]: host: string
+	userconfigs?: string | *"{}"
 	ingress?: {
 		host: string
 		path?: [...string]

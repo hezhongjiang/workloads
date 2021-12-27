@@ -26,8 +26,6 @@ parameter: {
 		capacity: string
 		path:     string
 	}
-	dependencies?: [...{[string]: host: string}]
-	userconfigs?: string | *"{}"
 }
 if parameter.userconfigs != _|_ {
 	construct: userconfigs: {
@@ -42,36 +40,33 @@ if parameter.userconfigs != _|_ {
 		}
 	}
 }
-if parameter.dependencies != _|_ {
-	for k, v in parameter.dependencies {
-		construct: "dependencies": {
-			apiVersion: "v1"
-			kind:       "ConfigMap"
-			metadata: {
-				name:      "dependencies"
-				namespace: context.namespace
-			}
-			data: {
-				k: v.host
-			}
+
+for k, v in parameter.dependencies {
+	construct: "dependencies-\(k)": {
+		apiVersion: "v1"
+		kind:       "ConfigMap"
+		metadata: {
+			name:      "dependencies-\(k)"
+			namespace: context.namespace
+		}
+		data: {
+			"\(k)": v.host
 		}
 	}
 }
 
-if parameter.configs != _|_ {
-	for k, v in parameter.configs {
-		construct: "island-\(context.workloadName)-\(k)": {
-			apiVersion: "v1"
-			kind:       "ConfigMap"
-			metadata: {
-				name:      "\(context.workloadName)-\(k)"
-				namespace: context.namespace
-			}
-			data: {
-				for _, vv in v.data {
-					if vv.name != "island-info" {
-						"\(vv.name)": vv.value
-					}
+for k, v in parameter.configs {
+	construct: "island-\(context.workloadName)-\(k)": {
+		apiVersion: "v1"
+		kind:       "ConfigMap"
+		metadata: {
+			name:      "\(context.workloadName)-\(k)"
+			namespace: context.namespace
+		}
+		data: {
+			for _, vv in v.data {
+				if vv.name != "island-info" {
+					"\(vv.name)": vv.value
 				}
 			}
 		}
@@ -139,24 +134,24 @@ construct: "\(context.workloadName)-deployment": {
 						containerPort: parameter.port
 					}]
 					volumeMounts: [
-						if parameter.configs != _|_ {
-							for k, v in parameter.configs if v.subPath != _|_ {
-								name:      "\(context.workloadName)-\(k)"
-								mountPath: "\(v.path)/\(v.subPath)"
-								subPath:   v.subPath
-							}
-							for k, v in parameter.configs if v.subPath == _|_ {
-								name:      "\(context.workloadName)-\(k)"
-								mountPath: v.path
-							}
+						for k, v in parameter.configs if v.subPath != _|_ {
+							name:      "\(context.workloadName)-\(k)"
+							mountPath: "\(v.path)/\(v.subPath)"
+							subPath:   v.subPath
+						},
+						for k, v in parameter.configs if v.subPath == _|_ {
+							name:      "\(context.workloadName)-\(k)"
+							mountPath: v.path
 						},
 						if parameter.userconfigs != _|_ {
 							name:      "userconfigs"
-							mountPath: "/etc/configs"
+							mountPath: "/etc/configs/userconfigs"
+							subPath:   "userconfigs"
 						},
 						for k, v in parameter.dependencies {
 							name:      "dependencies-\(k)"
-							mountPath: "/etc/configs"
+							mountPath: "/etc/configs/\(k)"
+							subPath:   "\(k)"
 						},
 						if parameter.storage != _|_ {
 							if parameter.storage.capacity != "" {
@@ -167,15 +162,13 @@ construct: "\(context.workloadName)-deployment": {
 					]
 				}]
 			volumes: [
-				if parameter.configs != _|_ {
-					for k, v in parameter.configs if v.subPath != _|_ {
-						name: "\(context.workloadName)-\(k)"
-						configMap: name: "\(context.workloadName)-\(k)"
-					}
-					for k, v in parameter.configs if v.subPath == _|_ {
-						name: "\(context.workloadName)-\(k)"
-						configMap: name: "\(context.workloadName)-\(k)"
-					}
+				for k, v in parameter.configs if v.subPath != _|_ {
+					name: "\(context.workloadName)-\(k)"
+					configMap: name: "\(context.workloadName)-\(k)"
+				},
+				for k, v in parameter.configs if v.subPath == _|_ {
+					name: "\(context.workloadName)-\(k)"
+					configMap: name: "\(context.workloadName)-\(k)"
 				},
 				if parameter.userconfigs != _|_ {
 					name: "userconfigs"
@@ -243,9 +236,9 @@ construct: "\(context.workloadName)-viewer": {
 	}
 }
 context: {
-	appName:       string
+	appName:      string
 	workloadName: string
-	namespace:     string
+	namespace:    string
 }
 parameter: {
 	authorization?: [...{
@@ -263,8 +256,8 @@ parameter: {
 		port:     int
 		protocol: string
 	}]
-	dependencies: [...{[string]: host: string}]
-	userconfigs: string
+	dependencies?: [string]: host: string
+	userconfigs?: string | *"{}"
 	ingress?: {
 		host: string
 		path?: [...string]
