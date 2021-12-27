@@ -40,36 +40,19 @@ if parameter.userconfigs != _|_ {
 		}
 	}
 }
-if parameter.dependencies != _|_ {
-	for k, v in parameter.dependencies {
-		construct: "dependencies": {
-			apiVersion: "v1"
-			kind:       "ConfigMap"
-			metadata: {
-				name:      "dependencies"
-				namespace: context.namespace
-			}
-			data: {
-				k: v.host
-			}
-		}
-	}
-}
 
-if parameter.configs != _|_ {
-	for k, v in parameter.configs {
-		construct: "island-\(context.workloadName)-\(k)": {
-			apiVersion: "v1"
-			kind:       "ConfigMap"
-			metadata: {
-				name:      "\(context.workloadName)-\(k)"
-				namespace: context.namespace
-			}
-			data: {
-				for _, vv in v.data {
-					if vv.name != "island-info" {
-						"\(vv.name)": vv.value
-					}
+for k, v in parameter.configs {
+	construct: "island-\(context.workloadName)-\(k)": {
+		apiVersion: "v1"
+		kind:       "ConfigMap"
+		metadata: {
+			name:      "\(context.workloadName)-\(k)"
+			namespace: context.namespace
+		}
+		data: {
+			for _, vv in v.data {
+				if vv.name != "island-info" {
+					"\(vv.name)": vv.value
 				}
 			}
 		}
@@ -168,10 +151,6 @@ construct: "\(context.workloadName)-statefulset": {
 							name:      "userconfigs"
 							mountPath: "/etc/configs"
 						},
-						for k, v in parameter.dependencies {
-							name:      "dependencies-\(k)"
-							mountPath: "/etc/configs"
-						},
 						if parameter.storage != _|_ {
 							if parameter.storage.capacity != "" {
 								name:      "storage-\(context.workloadName)"
@@ -192,10 +171,6 @@ construct: "\(context.workloadName)-statefulset": {
 					if parameter.userconfigs != _|_ {
 						name: "userconfigs"
 						configMap: name: "userconfigs"
-					},
-					for k, v in parameter.dependencies {
-						name: "dependencies-\(k)"
-						configMap: name: "dependencies-\(k)"
 					},
 					if parameter.storage != _|_ {
 						if parameter.storage.capacity != "" {
@@ -229,7 +204,7 @@ parameter: {
 		port:     int
 		protocol: string
 	}]
-	dependencies?: [...{[string]: host: string}]
+	dependencies?: [string]: host: string
 	userconfigs?: string | *"{}"
 	ingress?: {
 		host: string
