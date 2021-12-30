@@ -927,7 +927,7 @@ if parameter.ingress != _|_ {
 	}
 }
 
-"\(context.workloadName)-viewer": {
+"viewer": {
 	apiVersion: "security.istio.io/v1beta1"
 	kind:       "AuthorizationPolicy"
 	"metadata": {
@@ -943,7 +943,7 @@ if parameter.ingress != _|_ {
 		}
 		rules: [{
 			from: [
-				{source: namespace: [context.namespace]}
+				{source: namespaces: ["istio-system"]},
 			]
 			to: [{
 				operation: {
