@@ -5,7 +5,7 @@ parameter: {
 	}
 	init: string
 }
-"\(context.workloadName)-master-configmap": {
+"master-configmap": {
 	apiVersion: "v1"
 	kind:       "ConfigMap"
 	metadata: {
@@ -32,7 +32,7 @@ parameter: {
 	}
 }
 
-"\(context.workloadName)-master-service-headless": {
+"master-service-headless": {
 	apiVersion: "v1"
 	kind:       "Service"
 	metadata: {
@@ -58,7 +58,7 @@ parameter: {
 	}
 }
 
-"\(context.workloadName)-master-service": {
+"master-service": {
 	apiVersion: "v1"
 	kind:       "Service"
 	metadata: {
@@ -83,7 +83,7 @@ parameter: {
 	}
 }
 
-"\(context.workloadName)-service": {
+"service": {
 	apiVersion: "v1"
 	kind:       "Service"
 	metadata: {
@@ -108,7 +108,7 @@ parameter: {
 	}
 }
 
-"\(context.workloadName)-master-statefulset": {
+"master-statefulset": {
 	apiVersion: "apps/v1"
 	kind:       "StatefulSet"
 	metadata: {
@@ -130,7 +130,6 @@ parameter: {
 				item:     "\(context.workloadName)-master"
 			}
 			spec: {
-				serviceAccountName: context.appName
 				containers: [{
 					name:  "main"
 					image: "harbor1.zlibs.com/dockerhub/mysql:5.7"
@@ -180,7 +179,7 @@ parameter: {
 		}]
 	}
 }
-"\(context.workloadName)-slave-configmap": {
+"slave-configmap": {
 	apiVersion: "v1"
 	kind:       "ConfigMap"
 	metadata: {
@@ -207,7 +206,7 @@ parameter: {
 	}
 }
 
-"\(context.workloadName)-slave-service": {
+"slave-service": {
 	apiVersion: "v1"
 	kind:       "Service"
 	metadata: {
@@ -232,7 +231,7 @@ parameter: {
 	}
 }
 
-"\(context.workloadName)-slave-service-headless": {
+"slave-service-headless": {
 	apiVersion: "v1"
 	kind:       "Service"
 	metadata: {
@@ -258,7 +257,7 @@ parameter: {
 	}
 }
 
-"\(context.workloadName)-slave-statefulset": {
+"slave-statefulset": {
 	apiVersion: "apps/v1"
 	kind:       "StatefulSet"
 	metadata: {
@@ -280,7 +279,6 @@ parameter: {
 				item:     "\(context.workloadName)-slave"
 			}
 			spec: {
-				serviceAccountName: context.appName
 				containers: [{
 					name:  "main"
 					image: "harbor1.zlibs.com/dockerhub/mysql:5.7"
@@ -351,7 +349,7 @@ parameter: {
 	serviceEntry?: [...{
 		name:     string
 		host:     string
-		address?: string
+		address:  string
 		port:     int
 		protocol: string
 	}]
@@ -371,14 +369,6 @@ namespace: {
 		labels: {
 			"istio-injection": "enabled"
 		}
-	}
-}
-serviceAccount: {
-	apiVersion: "v1"
-	kind:       "ServiceAccount"
-	metadata: {
-		name:      context.appName
-		namespace: context.namespace
 	}
 }
 "default-authorizationPolicy": {
@@ -440,7 +430,7 @@ if parameter.authorization != _|_ {
 				rules: [
 					{
 						from: [
-							{source: principals: ["cluster.local/ns/\(context.namespace)/sa/\(context.appName)"]},
+							{source: namespaces: [context.namespace]},
 						]
 						if v.resources != _|_ {
 							to: [
@@ -456,5 +446,151 @@ if parameter.authorization != _|_ {
 				]
 			}
 		}
+	}
+}
+
+if parameter.ingress != _|_ {
+	"ingressgateway-http": {
+		apiVersion: "networking.istio.io/v1alpha3"
+		kind:       "Gateway"
+		metadata: {
+			name:      "\(context.namespace)-http"
+			namespace: "island-system"
+		}
+		spec: {
+			selector: istio: "ingressgateway"
+			servers: [
+				{
+					port: {
+						number:   80
+						name:     "http"
+						protocol: "HTTP"
+					}
+					hosts: [
+						parameter.ingress.host,
+					]
+				},
+			]
+		}
+	}
+	"gateway-https": {
+		apiVersion: "networking.istio.io/v1alpha3"
+		kind:       "Gateway"
+		metadata: {
+			name:      "\(context.namespace)-https"
+			namespace: "island-system"
+		}
+		spec: {
+			selector: istio: "ingressgateway"
+			servers: [
+				{
+					port: {
+						number:   443
+						name:     "https"
+						protocol: "HTTPS"
+					}
+					tls: {
+						mode:              "SIMPLE"
+						serverCertificate: "/etc/istio/ingressgateway-certs/tls.crt"
+						privateKey:        "/etc/istio/ingressgateway-certs/tls.key"
+					}
+					hosts: [
+						parameter.ingress.host,
+					]
+				},
+			]
+		}
+	}
+	"virtualservice-http": {
+		apiVersion: "networking.istio.io/v1alpha3"
+		kind:       "VirtualService"
+		metadata: {
+			name:      "\(context.appName)-http"
+			namespace: context.namespace
+		}
+		spec: {
+			hosts: ["*"]
+			gateways: ["island-system/\(context.namespace)-http"]
+			http: [
+				{
+					name: context.workloadName
+					if parameter.ingress.http != _|_ {
+						match: []
+					}
+					route: [{
+						destination: {
+							port: number: 80
+							host: context.workloadName
+						}
+						headers: {
+							request: {
+								add: {
+									"X-Forwarded-Host": parameter.ingress.host
+								}
+							}
+						}
+					}]
+				},
+			]
+		}
+	}
+	"virtualservice-https": {
+		apiVersion: "networking.istio.io/v1alpha3"
+		kind:       "VirtualService"
+		metadata: {
+			name:      "\(context.appName)-https"
+			namespace: context.namespace
+		}
+		spec: {
+			hosts: ["*"]
+			gateways: ["island-system/\(context.namespace)-https"]
+			http: [
+				{
+					match: []
+					route: [
+						{
+							destination: {
+								host: context.workloadName
+								port: {
+									number: 80
+								}
+							}
+							headers: {
+								request: {
+									add: {
+										"X-Forwarded-Host": parameter.ingress.host
+									}
+								}
+							}
+						},
+					]
+				},
+			]
+		}
+	}
+}
+"viewer": {
+	apiVersion: "security.istio.io/v1beta1"
+	kind:       "AuthorizationPolicy"
+	"metadata": {
+		name:      "\(context.workloadName)-viewer"
+		namespace: context.namespace
+	}
+	spec: {
+		selector: {
+			matchLabels: {
+				workload: context.workloadName
+			}
+		}
+		rules: [{
+			from: [
+				{source: namespaces: ["istio-system"]},
+			]
+			to: [{
+				operation: {
+					methods: ["GET", "POST", "DELETE", "PUT", "HEAD", "OPTIONS", "PATCH"]
+				}
+			}]
+		}]
 	}
 }

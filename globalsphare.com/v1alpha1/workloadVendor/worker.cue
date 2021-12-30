@@ -28,19 +28,31 @@ parameter: {
 	}
 }
 if parameter.userconfigs != _|_ {
-	userconfigs: {
+	"configMap-userconfigs": {
 		apiVersion: "v1"
 		kind:       "ConfigMap"
 		metadata: {
 			name:      "userconfigs"
 			namespace: context.namespace
 		}
-		data: {
-			userconfigs: parameter.userconfigs
+		data: userconfigs: parameter.userconfigs
+	}
+}
+if parameter.dependencies != _|_ {
+	for k, v in parameter.dependencies {
+		"dependencies-\(k)": {
+			apiVersion: "v1"
+			kind:       "ConfigMap"
+			metadata: {
+				name:      "dependencies-\(k)"
+				namespace: context.namespace
+			}
+			data: {
+				"\(k)": v.host
+			}
 		}
 	}
 }
-
 if parameter.configs != _|_ {
 	for k, v in parameter.configs {
 		"island-\(context.workloadName)-\(k)": {
@@ -52,16 +64,14 @@ if parameter.configs != _|_ {
 			}
 			data: {
 				for _, vv in v.data {
-					if vv.name != "island-info" {
-						"\(vv.name)": vv.value
-					}
+					"\(vv.name)": vv.value
 				}
 			}
 		}
 	}
 }
 if parameter.storage != _|_ {
-	if parameter.storage.capacity != _|_ {
+	if parameter.storage.capacity != "" {
 		storage: {
 			apiVersion: "v1"
 			kind:       "PersistentVolumeClaim"
@@ -79,27 +89,7 @@ if parameter.storage != _|_ {
 		}
 	}
 }
-statefulsetheadless: {
-	apiVersion: "v1"
-	kind:       "Service"
-	metadata: {
-		name:      "\(context.workloadName)-headless"
-		namespace: context.namespace
-		labels: {
-			workload: context.workloadName
-			app:      context.appName
-		}
-	}
-	spec: {
-		clusterIP: "None"
-		selector: {
-			workload: context.workloadName
-			app:      context.appName
-		}
-	}
-}
-
-"\(context.workloadName)-statefulset": {
+"statefulSet-example": {
 	apiVersion: "apps/v1"
 	kind:       "StatefulSet"
 	metadata: {
@@ -107,23 +97,21 @@ statefulsetheadless: {
 		namespace: context.namespace
 	}
 	spec: {
+		replicas: 1
 		selector: matchLabels: {
 			app:      context.appName
 			workload: context.workloadName
 		}
-		replicas:    1
 		serviceName: "\(context.workloadName)-headless"
 		template: {
 			metadata: labels: {
-				"app":      context.appName
-				"workload": context.workloadName
+				app:      context.appName
+				workload: context.workloadName
 			}
 			spec: {
-				serviceAccountName: context.appName
 				containers: [{
-					name:            context.workloadName
-					image:           parameter.image
-					imagePullPolicy: "Always"
+					image: parameter.image
+					name:  "main"
 					if parameter.cmd != _|_ {
 						command: parameter.cmd
 					}
@@ -135,10 +123,17 @@ statefulsetheadless: {
 					}
 					if parameter.cpu != _|_ {
 						resources: {
-							limits: cpu:   parameter.cpu
-							requests: cpu: parameter.cpu
+							limits: {
+								cpu: parameter.cpu
+							}
+							requests: {
+								cpu: parameter.cpu
+							}
 						}
 					}
+					ports: [{
+						containerPort: parameter.port
+					}]
 					volumeMounts: [
 						if parameter.configs != _|_
 						for k, v in parameter.configs if v.subPath != _|_ {
@@ -146,21 +141,31 @@ statefulsetheadless: {
 							mountPath: "\(v.path)/\(v.subPath)"
 							subPath:   v.subPath
 						},
+
 						if parameter.configs != _|_
 						for k, v in parameter.configs if v.subPath == _|_ {
 							name:      "\(context.workloadName)-\(k)"
 							mountPath: v.path
 						},
+
 						if parameter.userconfigs != _|_ {
 							name:      "userconfigs"
-							mountPath: "/etc/configs"
+							mountPath: "/etc/configs/userconfigs"
+							subPath:   "userconfigs"
 						},
+
+						if parameter.dependencies != _|_
+						for k, v in parameter.dependencies {
+							name:      "dependencies-\(k)"
+							mountPath: "/etc/configs/\(k)"
+							subPath:   "\(k)"
+						},
+
 						if parameter.storage != _|_
 						if parameter.storage.capacity != "" {
 							name:      "storage-\(context.workloadName)"
 							mountPath: parameter.storage.path
 						},
-
 					]
 				}]
 				volumes: [
@@ -169,23 +174,46 @@ statefulsetheadless: {
 						name: "\(context.workloadName)-\(k)"
 						configMap: name: "\(context.workloadName)-\(k)"
 					},
+
 					if parameter.configs != _|_
 					for k, v in parameter.configs if v.subPath == _|_ {
 						name: "\(context.workloadName)-\(k)"
 						configMap: name: "\(context.workloadName)-\(k)"
 					},
+
 					if parameter.userconfigs != _|_ {
 						name: "userconfigs"
 						configMap: name: "userconfigs"
 					},
+
+					if parameter.dependencies != _|_
+					for k, v in parameter.dependencies {
+						name: "dependencies-\(k)"
+						configMap: name: "dependencies-\(k)"
+					},
+
 					if parameter.storage != _|_
 					if parameter.storage.capacity != "" {
 						name: "storage-\(context.workloadName)"
 						persistentVolumeClaim: claimName: "storage-\(context.workloadName)"
 					},
-
 				]
 			}
+		}
+	}
+}
+"service-headless": {
+	apiVersion: "v1"
+	kind:       "Service"
+	metadata: {
+		name:      "\(context.workloadName)-headless"
+		namespace: context.namespace
+	}
+	spec: {
+		clusterIP: "None"
+		selector: {
+			app:      context.appName
+			workload: context.workloadName
 		}
 	}
 }
@@ -206,7 +234,7 @@ parameter: {
 	serviceEntry?: [...{
 		name:     string
 		host:     string
-		address?: string
+		address:  string
 		port:     int
 		protocol: string
 	}]
@@ -217,6 +245,7 @@ parameter: {
 		path?: [...string]
 	}
 }
+
 namespace: {
 	apiVersion: "v1"
 	kind:       "Namespace"
@@ -225,14 +254,6 @@ namespace: {
 		labels: {
 			"istio-injection": "enabled"
 		}
-	}
-}
-serviceAccount: {
-	apiVersion: "v1"
-	kind:       "ServiceAccount"
-	metadata: {
-		name:      context.appName
-		namespace: context.namespace
 	}
 }
 "default-authorizationPolicy": {
@@ -291,26 +312,149 @@ if parameter.authorization != _|_ {
 						workload: v.service
 					}
 				}
-				rules: [{
-					from: [
-						{source: principals: ["cluster.local/ns/\(context.namespace)/sa/\(context.appName)"]},
-					]
-					if v.resources != _|_ {
-						to: [
-							for resource in v.resources {
-								operation: {
-									methods: resource.actions
-									paths: [resource.uri]
-								}
-							},
+				rules: [
+					{
+						from: [
+							{source: namespaces: [context.namespace]}
 						]
-					}
-				}]
+						if v.resources != _|_ {
+							to: [
+								for resource in v.resources {
+									operation: {
+										methods: resource.actions
+										paths: [resource.uri]
+									}
+								},
+							]
+						}
+					},
+				]
 			}
 		}
 	}
 }
-"\(context.workloadName)-viewer": {
+
+if parameter.ingress != _|_ {
+	"ingressgateway-http": {
+		apiVersion: "networking.istio.io/v1alpha3"
+		kind:       "Gateway"
+		metadata: {
+			name:      "\(context.namespace)-http"
+			namespace: "island-system"
+		}
+		spec: {
+			selector: istio: "ingressgateway"
+			servers: [
+				{
+					port: {
+						number:   80
+						name:     "http"
+						protocol: "HTTP"
+					}
+					hosts: [
+						parameter.ingress.host,
+					]
+				},
+			]
+		}
+	}
+	"gateway-https": {
+		apiVersion: "networking.istio.io/v1alpha3"
+		kind:       "Gateway"
+		metadata: {
+			name:      "\(context.namespace)-https"
+			namespace: "island-system"
+		}
+		spec: {
+			selector: istio: "ingressgateway"
+			servers: [
+				{
+					port: {
+						number:   443
+						name:     "https"
+						protocol: "HTTPS"
+					}
+					tls: {
+						mode:              "SIMPLE"
+						serverCertificate: "/etc/istio/ingressgateway-certs/tls.crt"
+						privateKey:        "/etc/istio/ingressgateway-certs/tls.key"
+					}
+					hosts: [
+						parameter.ingress.host,
+					]
+				},
+			]
+		}
+	}
+	"virtualservice-http": {
+		apiVersion: "networking.istio.io/v1alpha3"
+		kind:       "VirtualService"
+		metadata: {
+			name:      "\(context.appName)-http"
+			namespace: context.namespace
+		}
+		spec: {
+			hosts: ["*"]
+			gateways: ["island-system/\(context.namespace)-http"]
+			http: [
+				{
+					name: context.workloadName
+					if parameter.ingress.http != _|_ {
+						match: []
+					}
+					route: [{
+						destination: {
+							port: number: 80
+							host: context.workloadName
+						}
+						headers: {
+							request: {
+								add: {
+									"X-Forwarded-Host": parameter.ingress.host
+								}
+							}
+						}
+					}]
+				},
+			]
+		}
+	}
+	"virtualservice-https": {
+		apiVersion: "networking.istio.io/v1alpha3"
+		kind:       "VirtualService"
+		metadata: {
+			name:      "\(context.appName)-https"
+			namespace: context.namespace
+		}
+		spec: {
+			hosts: ["*"]
+			gateways: ["island-system/\(context.namespace)-https"]
+			http: [
+				{
+					match: []
+					route: [
+						{
+							destination: {
+								host: context.workloadName
+								port: {
+									number: 80
+								}
+							}
+							headers: {
+								request: {
+									add: {
+										"X-Forwarded-Host": parameter.ingress.host
+									}
+								}
+							}
+						},
+					]
+				},
+			]
+		}
+	}
+}
+"viewer": {
 	apiVersion: "security.istio.io/v1beta1"
 	kind:       "AuthorizationPolicy"
 	"metadata": {
@@ -318,19 +462,15 @@ if parameter.authorization != _|_ {
 		namespace: context.namespace
 	}
 	spec: {
-		action: "ALLOW"
 		selector: {
 			matchLabels: {
-				app:      context.appName
 				workload: context.workloadName
 			}
 		}
 		rules: [{
-			from: [{
-				source: {
-					namespaces: [context.namespace]
-				}
-			}]
+			from: [
+				{source: namespaces: ["istio-system"]}
+			]
 			to: [{
 				operation: {
 					methods: ["GET", "POST", "DELETE", "PUT", "HEAD", "OPTIONS", "PATCH"]

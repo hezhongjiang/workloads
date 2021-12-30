@@ -8,7 +8,7 @@ spec: |
   parameter: {
   	size: *"1G" | string
   }
-  "\(context.workloadName)-service": {
+  "service": {
   	apiVersion: "v1"
   	kind:       "Service"
   	metadata: {
@@ -30,7 +30,7 @@ spec: |
   		}]
   	}
   }
-  "\(context.workloadName)-headless-service": {
+  "headless-service": {
   	apiVersion: "v1"
   	kind:       "Service"
   	metadata: {
@@ -60,7 +60,7 @@ spec: |
   	}
   }
 
-  "\(context.workloadName)-StatefulSet": {
+  "StatefulSet": {
   	apiVersion: "apps/v1"
   	kind:       "StatefulSet"
   	metadata: {
@@ -84,7 +84,6 @@ spec: |
   				}
   			}
   			spec: {
-  				serviceAccountName: context.appName
   				containers: [{
   					name:  "main"
   					image: "fastop/zookeeper:3.4.10"
@@ -164,14 +163,6 @@ spec: |
   		labels: {
   			"istio-injection": "enabled"
   		}
-  	}
-  }
-  serviceAccount: {
-  	apiVersion: "v1"
-  	kind:       "ServiceAccount"
-  	metadata: {
-  		name:      context.appName
-  		namespace: context.namespace
   	}
   }
   "default-authorizationPolicy": {
