@@ -11,7 +11,7 @@ serviceAccount: {
 	apiVersion: "v1"
 	kind:       "ConfigMap"
 	metadata: {
-		name:      "\(context.workload)-redis-conf"
+		name:      "\(context.workloadName)-redis-conf"
 		namespace: context.namespace
 	}
 	data: {
