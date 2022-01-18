@@ -4,8 +4,6 @@ metadata:
   name: mysql
 spec:
   parameter: |
-    rootpwd: string | "123456"
-    storage: {
-      capacity: string | "1Gi"
-    }
-    init: string
+    rootpwd: string | *"123456"
+    size: string | *"1Gi"
+    init: string | *""

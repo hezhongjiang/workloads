@@ -1,9 +1,7 @@
 parameter: {
-	rootpwd: string | "123456"
-	storage: {
-		capacity: string | "1Gi"
-	}
-	init: string
+	rootpwd: string | *"123456"
+	size:    string | *"1Gi"
+	init:    string | *""
 }
 "master-configmap": {
 	apiVersion: "v1"
@@ -174,7 +172,7 @@ parameter: {
 			spec: {
 				accessModes: ["ReadWriteOnce"]
 				storageClassName: "rook-ceph-block"
-				resources: requests: storage: parameter.storage.capacity
+				resources: requests: storage: parameter.size
 			}
 		}]
 	}
@@ -327,7 +325,7 @@ parameter: {
 			spec: {
 				accessModes: ["ReadWriteOnce"]
 				storageClassName: "rook-ceph-block"
-				resources: requests: storage: parameter.storage.capacity
+				resources: requests: storage: parameter.size
 			}
 		}]
 	}

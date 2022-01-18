@@ -1,6 +1,6 @@
 parameter: {
-	rootpwd: string | "123456"
-	init:    string
+	rootpwd: string | *"123456"
+	init:    string | *""
 }
 "master-configmap": {
 	apiVersion: "v1"

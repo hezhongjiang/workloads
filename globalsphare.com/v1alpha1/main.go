@@ -30,6 +30,7 @@ func main() {
 	workload = append(workload, def{"workloadType", "kafka", "aam.globalsphare.com/v1alpha1", "workloadType/kafka.yaml", "", "", ""})
 	workload = append(workload, def{"workloadType", "rabbitmq", "aam.globalsphare.com/v1alpha1", "workloadType/rabbitmq.yaml", "", "", ""})
 	workload = append(workload, def{"workloadType", "zookeeper", "aam.globalsphare.com/v1alpha1", "workloadType/zookeeper.yaml", "", "", ""})
+	workload = append(workload, def{"workloadType", "consul", "aam.globalsphare.com/v1alpha1", "workloadType/consul.yaml", "", "", ""})
 
 	//vendor
 	workload = append(workload, def{
@@ -130,6 +131,15 @@ func main() {
 		"workloadVendor/yaml/zookeeper.yaml",
 		"workloadVendor/cue/zookeeper.cue",
 		"workloadVendor/metadata/zookeeper.yaml",
+	})
+	workload = append(workload, def{
+		"workloadVendor",
+		"consul",
+		"aam.globalsphare.com/v1alpha1",
+		"workloadVendor/value/consul.yaml",
+		"workloadVendor/yaml/consul.yaml",
+		"workloadVendor/cue/consul.cue",
+		"workloadVendor/metadata/consul.yaml",
 	})
 	//trait
 	workload = append(workload, def{

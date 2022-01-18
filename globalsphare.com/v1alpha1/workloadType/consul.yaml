@@ -4,7 +4,6 @@ metadata:
   name: consul
 spec:
   parameter: |
-    image: *"harbor1.zlibs.com/cs/consul:1.7.1" | string
-    storage?: {
-        capacity: string | *"1G"
-    }
+    count: int | * 3
+  traits:
+    - ingress

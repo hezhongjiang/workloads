@@ -4,11 +4,9 @@ metadata:
   name: mysql
 spec: |
   parameter: {
-  	rootpwd: string | "123456"
-  	storage: {
-  		capacity: string | "1Gi"
-  	}
-  	init: string
+  	rootpwd: string | *"123456"
+  	size:    string | *"1Gi"
+  	init:    string | *""
   }
   "master-configmap": {
   	apiVersion: "v1"
@@ -179,7 +177,7 @@ spec: |
   			spec: {
   				accessModes: ["ReadWriteOnce"]
   				storageClassName: "rook-ceph-block"
-  				resources: requests: storage: parameter.storage.capacity
+  				resources: requests: storage: parameter.size
   			}
   		}]
   	}
@@ -332,7 +330,7 @@ spec: |
   			spec: {
   				accessModes: ["ReadWriteOnce"]
   				storageClassName: "rook-ceph-block"
-  				resources: requests: storage: parameter.storage.capacity
+  				resources: requests: storage: parameter.size
   			}
   		}]
   	}
