@@ -1,11 +1,5 @@
-parameter: {}
-serviceAccount: {
-	apiVersion: "v1"
-	kind:       "ServiceAccount"
-	metadata: {
-		name:      context.workloadName
-		namespace: context.namespace
-	}
+parameter: {
+    size?: *"1G" | string
 }
 "redis-conf": {
 	apiVersion: "v1"
@@ -120,7 +114,6 @@ serviceAccount: {
 				item:     "\(context.workloadName)-master"
 			}
 			spec: {
-				serviceAccountName: context.workloadName
 				containers: [{
 					name:  "main"
 					image: "harbor1.zlibs.com/dockerhub/redis:6.2.4"
@@ -220,7 +213,6 @@ serviceAccount: {
 				item:     "\(context.workloadName)-slave"
 			}
 			spec: {
-				serviceAccountName: context.workloadName
 				containers: [{
 					name:  "\(context.workloadName)-slave"
 					image: "harbor1.zlibs.com/dockerhub/redis:6.2.4"

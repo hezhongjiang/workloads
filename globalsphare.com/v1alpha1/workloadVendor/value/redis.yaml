@@ -4,14 +4,6 @@ metadata:
   name: redis
 spec: |
   parameter: {}
-  serviceAccount: {
-  	apiVersion: "v1"
-  	kind:       "ServiceAccount"
-  	metadata: {
-  		name:      context.workloadName
-  		namespace: context.namespace
-  	}
-  }
   "redis-conf": {
   	apiVersion: "v1"
   	kind:       "ConfigMap"
@@ -125,7 +117,6 @@ spec: |
   				item:     "\(context.workloadName)-master"
   			}
   			spec: {
-  				serviceAccountName: context.workloadName
   				containers: [{
   					name:  "main"
   					image: "harbor1.zlibs.com/dockerhub/redis:6.2.4"
@@ -225,7 +216,6 @@ spec: |
   				item:     "\(context.workloadName)-slave"
   			}
   			spec: {
-  				serviceAccountName: context.workloadName
   				containers: [{
   					name:  "\(context.workloadName)-slave"
   					image: "harbor1.zlibs.com/dockerhub/redis:6.2.4"

@@ -4,3 +4,4 @@ metadata:
   name: redis
 spec:
   parameter: |
+    size?: *"1G" | string
